@@ -1525,19 +1525,19 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Invalid format.")
 	}
 
-	var count int
-	if err := h.DB.Get(&count, "SELECT COUNT(*) FROM `courses` WHERE `id` = ?", req.CourseID); err != nil {
+	var courseName string
+	if err := h.DB.Get(&courseName, "SELECT `name` FROM `courses` WHERE `id` = ?", req.CourseID); err != nil {
+		if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "No such course.")
+		}
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
-	}
-	if count == 0 {
-		return c.String(http.StatusNotFound, "No such course.")
 	}
 
 	if _, err := h.DB.Exec(
 		"INSERT INTO `announcements` (`id`, `course_id`, `title`, `message`, `course_name`)" +
-			" VALUES (?, ?, ?, ?, (SELECT `name` FROM `courses` WHERE `courses`.`id` = ?))",
-		req.ID, req.CourseID, req.Title, req.Message, req.CourseID,
+			" VALUES (?, ?, ?, ?, ?)",
+		req.ID, req.CourseID, req.Title, req.Message, req.CourseID, courseName,
 	); err != nil {
 		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
 			var announcement Announcement
