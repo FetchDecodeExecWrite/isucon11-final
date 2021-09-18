@@ -733,9 +733,9 @@ func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 		" WHERE `users`.`type` = ?" +
 		" GROUP BY `users`.`id`"
 
-		err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
+	err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
 
-		return gpas, err
+	return gpas, err
 }
 
 // ---------- Courses API ----------
@@ -1318,7 +1318,7 @@ func createSubmissionsZip(zipFilePath string, classID string, submissions []Subm
 	// ファイル名を指定の形式に変更
 	for _, submission := range submissions {
 		if err := exec.Command(
-			"cp",
+			"ln", "-s",
 			AssignmentsDirectory+classID+"-"+submission.UserID+".pdf",
 			tmpDir+submission.UserCode+"-"+submission.FileName,
 		).Run(); err != nil {
