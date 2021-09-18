@@ -603,7 +603,7 @@ func (h *handlers) GetGrades(c echo.Context) error {
 	for _, course := range registeredCourses {
 		// 講義一覧の取得
 		var classes []ClassWithGrade
-		query = "SELECT *, IFNULL(`submissions`.`score`, -1) AS `my_score`," +
+		query = "SELECT `classes`.*, IFNULL(`submissions`.`score`, -1) AS `my_score`," +
 			" (SELECT COUNT(*) FROM `submissions` WHERE `class_id` = `classes`.`id`) AS `submissions_count`" +
 			" FROM `classes`" +
 			" LEFT JOIN `submissions` ON `submissions`.`user_id` = ? AND `submissions`.`class_id` = `classes`.`id`" +
