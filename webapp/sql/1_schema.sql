@@ -16,7 +16,8 @@ CREATE TABLE `users`
     `hashed_password` BINARY(60)                  NOT NULL,
     `credit_count`    INT UNSIGNED                NOT NULL DEFAULT 0,
     `sum_score`       INT UNSIGNED                NOT NULL DEFAULT 0,
-    `type`            ENUM ('student', 'teacher') NOT NULL
+    `type`            ENUM ('student', 'teacher') NOT NULL,
+    INDEX tycc (type, credit_count)
 );
 
 CREATE TABLE `courses`
