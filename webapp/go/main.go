@@ -30,6 +30,7 @@ const (
 	InitDataDirectory         = "../data/"
 	SessionName               = "isucholar_go"
 	mysqlErrNumDuplicateEntry = 1062
+	ISU3InitializeURL         = "http://10.11.6.103:7000/initialize2"
 )
 
 type handlers struct {
@@ -54,6 +55,7 @@ func main() {
 	}
 
 	e.POST("/initialize", h.Initialize)
+	e.GET("/initialize2", h.Initialize2)
 
 	e.POST("/login", h.Login)
 	e.POST("/logout", h.Logout)
@@ -91,6 +93,20 @@ func main() {
 
 type InitializeResponse struct {
 	Language string `json:"language"`
+}
+
+func (h *handlers) Initialize2(c echo.Context) error {
+	exec.Command("curl", ISU3InitializeURL).Run()
+	if err := exec.Command("rm", "-rf", AssignmentsDirectory).Run(); err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	if err := exec.Command("cp", "-r", InitDataDirectory, AssignmentsDirectory).Run(); err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return nil
 }
 
 // Initialize POST /initialize 初期化エンドポイント
@@ -733,9 +749,9 @@ func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 		" WHERE `users`.`type` = ?" +
 		" GROUP BY `users`.`id`"
 
-		err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
+	err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
 
-		return gpas, err
+	return gpas, err
 }
 
 // ---------- Courses API ----------
