@@ -15,8 +15,7 @@ for i in 1 2 3; do ssh isu$i -- "git reset --hard origin/$branch"; done
 
 echo "----------pull $branch complete.----------"
 
-for i in 1 2 3; do echo "- isu$i build..."; ssh isu$i -- "source ~/bashrc2 && cd ~/webapp/go; go build" &   done
-wait
+for i in 1 2 3; do echo "- isu$i build..."; ssh isu$i -- "source ~/bashrc2 && cd ~/webapp/go; go build"; done
 
 for i in 1 2 3; do ssh isu$i -- "sudo systemctl stop isucholar.go.service"; done
 for i in 1 2 3; do ssh isu$i -- "sudo systemctl start isucholar.go.service"; done
