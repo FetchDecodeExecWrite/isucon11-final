@@ -1435,9 +1435,8 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	var announcements []AnnouncementWithoutDetail
 	var args []interface{}
 	query := "SELECT `announcements`.`id`, `course_id`, `course_name`, `title`, NOT `unread_announcements`.`is_deleted` AS `unread`" +
-		" FROM `announcements`" +
-		" JOIN `unread_announcements` ON" +
-		" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`"
+		" FROM `unread_announcements`, `announcements`" +
+		" WHERE `unread_announcements`.`user_id` = ? AND `unread_announcements`.`announcement_id` = `announcements`.`id`"
 	args = append(args, userID)
 
 	if courseID := c.QueryParam("course_id"); courseID != "" {
@@ -1445,7 +1444,7 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 		args = append(args, courseID)
 	}
 	query +=
-		" ORDER BY `announcements`.`id` DESC" +
+		" ORDER BY `unread_announcements`.`announcement_id` DESC" +
 			" LIMIT ? OFFSET ?"
 
 	var page int
