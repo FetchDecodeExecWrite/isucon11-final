@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
@@ -19,6 +20,7 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/gommon/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -47,6 +49,9 @@ func main() {
 
 	db, _ := GetDB(true)
 	db.SetMaxOpenConns(10)
+
+	// unreadAnnouncements のキャッシュの初期化
+	initializeUnreadAnnouncement(db)
 
 	h := &handlers{
 		DB: db,
@@ -1330,6 +1335,65 @@ type GetAnnouncementsResponse struct {
 	UnreadCount   int                         `json:"unread_count"`
 	Announcements []AnnouncementWithoutDetail `json:"announcements"`
 }
+type UnreadAnnouncement struct {
+	AnnouncementID string `db:"announcement_id"`
+	UserID         string `db:"user_id"`
+}
+type UnreadCache struct {
+	lock  sync.Mutex
+	table map[string]bool
+}
+
+var (
+	UnreadLock          sync.Mutex
+	UnreadAnnouncements map[string]int
+)
+
+// unread announcement cache table
+func initializeUnreadAnnouncement(db *sqlx.DB) {
+	UnreadLock.Lock()
+	defer UnreadLock.Unlock()
+	// initialize Announcements
+	UnreadAnnouncements = make(map[string]int)
+
+	var ids []string
+	if err := db.Select(&ids, "SELECT id FROM `users`"); err != nil {
+		panic("failed to get users")
+	}
+	for _, id := range ids {
+		var count int
+		if err := db.Get(&count, "SELECT COUNT(*) FROM `unread_announcements` WHERE `user_id` = ? AND NOT `is_deleted`", id); err != nil {
+			panic("failed to get count")
+		}
+		UnreadAnnouncements[id] = count
+	}
+}
+
+func incUnreadAnnouncement(userid string) {
+	UnreadLock.Lock()
+	defer UnreadLock.Unlock()
+	if val, ok := UnreadAnnouncements[userid]; ok {
+		UnreadAnnouncements[userid] = val + 1
+	} else {
+		UnreadAnnouncements[userid] = 1
+	}
+}
+
+func decUnreadAnnouncement(userid string) {
+	UnreadLock.Lock()
+	defer UnreadLock.Unlock()
+	if val, ok := UnreadAnnouncements[userid]; ok {
+		UnreadAnnouncements[userid] = val - 1
+	} else {
+		log.Errorf("invalid case: decAnnouncement")
+	}
+}
+
+func getUnreadAnnouncementCnt(userid string) int {
+	UnreadLock.Lock()
+	defer UnreadLock.Unlock()
+	return UnreadAnnouncements[userid]
+}
 
 // GetAnnouncementList GET /api/announcements お知らせ一覧取得
 func (h *handlers) GetAnnouncementList(c echo.Context) error {
@@ -1352,9 +1416,9 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	query +=
 		" JOIN `unread_announcements` ON" +
 			" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`" +
-		" WHERE 1=1" +
-		" ORDER BY `announcements`.`id` DESC" +
-		" LIMIT ? OFFSET ?"
+			" WHERE 1=1" +
+			" ORDER BY `announcements`.`id` DESC" +
+			" LIMIT ? OFFSET ?"
 	args = append(args, userID)
 
 	var page int
@@ -1376,11 +1440,7 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	var unreadCount int
-	if err := h.DB.Get(&unreadCount, "SELECT COUNT(*) FROM `unread_announcements` WHERE `user_id` = ? AND NOT `is_deleted`", userID); err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	var unreadCount int = getUnreadAnnouncementCnt(userID)
 
 	var links []string
 	linkURL, err := url.Parse(c.Request().URL.Path + "?" + c.Request().URL.RawQuery)
@@ -1431,11 +1491,6 @@ type AddAnnouncementRequest struct {
 	Message  string `json:"message"`
 }
 
-type UnreadAnnouncement struct {
-	AnnoucementID string `db:"announcement_id"`
-	UserID        string `db:"user_id"`
-}
-
 // AddAnnouncement POST /api/announcements 新規お知らせ追加
 func (h *handlers) AddAnnouncement(c echo.Context) error {
 	var req AddAnnouncementRequest
@@ -1482,6 +1537,7 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 		rows := make([]UnreadAnnouncement, len(targets))
 		for i, user := range targets {
 			rows[i] = UnreadAnnouncement{req.ID, user.ID}
+			incUnreadAnnouncement(user.ID)
 		}
 		if _, err := h.DB.NamedExec("INSERT INTO `unread_announcements`"+
 			"(`announcement_id`, `user_id`)"+
@@ -1547,6 +1603,7 @@ func (h *handlers) GetAnnouncementDetail(c echo.Context) error {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	decUnreadAnnouncement(userID)
 
 	if err := tx.Commit(); err != nil {
 		c.Logger().Error(err)
