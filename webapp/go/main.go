@@ -1139,19 +1139,19 @@ func (h *handlers) SubmitAssignment(c echo.Context) error {
 	if err != nil {
 		return c.String(http.StatusBadRequest, "Invalid file.")
 	}
-	defer file.Close()
 
-	data, err := io.ReadAll(file)
-	if err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	go func() {
+		dst := AssignmentsDirectory + classID + "-" + userID + ".pdf"
+		dfile, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			c.Logger().Error(err)
+			// return c.NoContent(http.StatusInternalServerError)
+		}
+		io.Copy(dfile, file)
 
-	dst := AssignmentsDirectory + classID + "-" + userID + ".pdf"
-	if err := os.WriteFile(dst, data, 0666); err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+		file.Close()
+		dfile.Close()
+	}()
 
 	tx, err := h.DB.Beginx()
 	if err != nil {
@@ -1535,7 +1535,7 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 	}
 
 	if _, err := h.DB.Exec(
-		"INSERT INTO `announcements` (`id`, `course_id`, `title`, `message`, `course_name`)" +
+		"INSERT INTO `announcements` (`id`, `course_id`, `title`, `message`, `course_name`)"+
 			" VALUES (?, ?, ?, ?, ?)",
 		req.ID, req.CourseID, req.Title, req.Message, courseName,
 	); err != nil {
