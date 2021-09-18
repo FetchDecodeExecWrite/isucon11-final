@@ -627,10 +627,9 @@ func (h *handlers) GetGrades(c echo.Context) error {
 
 		// この科目を履修している学生のTotalScore一覧を取得
 		var totals []int
-		query := "SELECT `users`.`sum_score` AS `total_score`" +
+		query := "SELECT `registrations`.`sum_score` AS `total_score`" +
 			" FROM `users`" +
-			" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
-			" JOIN `courses` ON `registrations`.`course_id` = ?"
+			" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`"
 		if err := h.DB.Select(&totals, query, course.ID); err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -1243,6 +1242,11 @@ func (h *handlers) RegisterScores(c echo.Context) error {
 
 	for _, score := range req {
 		if _, err := tx.Exec("UPDATE `submissions` JOIN `users` ON `users`.`id` = `submissions`.`user_id` SET `score` = ? WHERE `users`.`code` = ? AND `class_id` = ?", score.Score, score.UserCode, classID); err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
+		if _, err := tx.Exec("UPDATE `registrations` JOIN `users` ON `users`.`code` = ? AND `users`.`id` = `registrations`.`user_id` SET `sum_score` = `sum_score` + ? WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = ?)", score.UserCode, score.Score, classID); err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
