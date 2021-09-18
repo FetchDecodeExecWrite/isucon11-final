@@ -1196,6 +1196,17 @@ type Score struct {
 func (h *handlers) RegisterScores(c echo.Context) error {
 	classID := c.Param("classID")
 
+	var req []Score
+	if err := c.Bind(&req); err != nil {
+		return c.String(http.StatusBadRequest, "Invalid format.")
+	}
+	update_submissions := ""
+	update_registrations := ""
+	for _, score := range req {
+		update_submissions += fmt.Sprintf("UPDATE `submissions` JOIN `users` ON `users`.`id` = `submissions`.`user_id` SET `score` = %d WHERE `users`.`code` = %s AND `class_id` = %s;", score.Score, score.UserCode, classID)
+		update_registrations += fmt.Sprintf("UPDATE `registrations` JOIN `users` ON `users`.`code` = %s AND `users`.`id` = `registrations`.`user_id` SET `registrations`.`sum_score` = `registrations`.`sum_score` + %d WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = %s);", score.UserCode, score.Score, classID)
+	}
+
 	tx, err := h.DB.Beginx()
 	if err != nil {
 		c.Logger().Error(err)
@@ -1215,21 +1226,13 @@ func (h *handlers) RegisterScores(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "This assignment is not closed yet.")
 	}
 
-	var req []Score
-	if err := c.Bind(&req); err != nil {
-		return c.String(http.StatusBadRequest, "Invalid format.")
+	if _, err := tx.Exec(update_submissions); err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
-
-	for _, score := range req {
-		if _, err := tx.Exec("UPDATE `submissions` JOIN `users` ON `users`.`id` = `submissions`.`user_id` SET `score` = ? WHERE `users`.`code` = ? AND `class_id` = ?", score.Score, score.UserCode, classID); err != nil {
-			c.Logger().Error(err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
-
-		if _, err := tx.Exec("UPDATE `registrations` JOIN `users` ON `users`.`code` = ? AND `users`.`id` = `registrations`.`user_id` SET `registrations`.`sum_score` = `registrations`.`sum_score` + ? WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = ?)", score.UserCode, score.Score, classID); err != nil {
-			c.Logger().Error(err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+	if _, err := tx.Exec(update_registrations); err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -1354,9 +1357,9 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	query +=
 		" JOIN `unread_announcements` ON" +
 			" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`" +
-		" WHERE 1=1" +
-		" ORDER BY `announcements`.`id` DESC" +
-		" LIMIT ? OFFSET ?"
+			" WHERE 1=1" +
+			" ORDER BY `announcements`.`id` DESC" +
+			" LIMIT ? OFFSET ?"
 	args = append(args, userID)
 
 	var page int
