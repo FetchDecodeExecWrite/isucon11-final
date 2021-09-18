@@ -1359,7 +1359,7 @@ func initializeUnreadAnnouncement(db *sqlx.DB) {
 	UnreadAnnouncements = make(map[string]int)
 
 	var ids []string
-	if err := db.Get(&ids, "SELECT id FROM `users`"); err != nil {
+	if err := db.Select(&ids, "SELECT id FROM `users`"); err != nil {
 		panic("failed to get users")
 	}
 	for _, id := range ids {
