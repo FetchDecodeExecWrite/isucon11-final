@@ -21,6 +21,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	echopprof "github.com/sevenNt/echo-pprof"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -90,7 +91,7 @@ func main() {
 			announcementsAPI.GET("/:announcementID", h.GetAnnouncementDetail)
 		}
 	}
-
+	echopprof.Wrap(e)
 	e.Logger.Error(e.StartServer(e.Server))
 }
 
