@@ -627,12 +627,13 @@ func (h *handlers) GetGrades(c echo.Context) error {
 					Submitters: class.SubmissionsCount,
 				})
 			} else {
+				var score = class.MyScore
 				myTotalScore += class.MyScore
 				classScores = append(classScores, ClassScore{
 					ClassID:    class.ID,
 					Part:       class.Part,
 					Title:      class.Title,
-					Score:      &class.MyScore,
+					Score:      &score,
 					Submitters: class.SubmissionsCount,
 				})
 			}
