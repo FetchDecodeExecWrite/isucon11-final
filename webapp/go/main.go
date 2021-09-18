@@ -727,7 +727,7 @@ func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 		" WHERE `users`.`type` = ?" +
 		" GROUP BY `users`.`id`"
 
-		err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
+		err := h.DB.Select(&gpas, query, StatusClosed, Student)
 
 		return gpas, err
 }
