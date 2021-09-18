@@ -1203,8 +1203,8 @@ func (h *handlers) RegisterScores(c echo.Context) error {
 	update_submissions := ""
 	update_registrations := ""
 	for _, score := range req {
-		update_submissions += fmt.Sprintf("UPDATE `submissions` JOIN `users` ON `users`.`id` = `submissions`.`user_id` SET `score` = %d WHERE `users`.`code` = %s AND `class_id` = %s;", score.Score, score.UserCode, classID)
-		update_registrations += fmt.Sprintf("UPDATE `registrations` JOIN `users` ON `users`.`code` = %s AND `users`.`id` = `registrations`.`user_id` SET `registrations`.`sum_score` = `registrations`.`sum_score` + %d WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = %s);", score.UserCode, score.Score, classID)
+		update_submissions += fmt.Sprintf("UPDATE `submissions` JOIN `users` ON `users`.`id` = `submissions`.`user_id` SET `score` = %d WHERE `users`.`code` = \"%s\" AND `class_id` = \"%s\";", score.Score, score.UserCode, classID)
+		update_registrations += fmt.Sprintf("UPDATE `registrations` JOIN `users` ON `users`.`code` = \"%s\" AND `users`.`id` = `registrations`.`user_id` SET `registrations`.`sum_score` = `registrations`.`sum_score` + %d WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = \"%s\");", score.UserCode, score.Score, classID)
 	}
 
 	tx, err := h.DB.Beginx()
