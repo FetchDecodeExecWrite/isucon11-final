@@ -1,0 +1,17 @@
+bkup
+.ssh
+.bash_history
+.cache
+.profile
+.sudo_as_admin_successful
+.viminfo
+.gitconfig
+.cargo
+.rustup
+.bundle
+
+/webapp/rust
+
+/local
+/xbuild
+/go
