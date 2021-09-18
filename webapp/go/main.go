@@ -674,7 +674,7 @@ func (h *handlers) GetGrades(c echo.Context) error {
 
 	// GPAの統計値
 	// 一つでも修了した科目がある学生のGPA一覧
-	gpas, err := h.getAllGPAsZTC()
+	gpas, err := h.getAllGPAsWithoutZTC()
 	if err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -693,37 +693,6 @@ func (h *handlers) GetGrades(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, res)
-}
-
-var (
-	getAllGPAsZTCDelay  = 100 * time.Millisecond // 入れなくても良いが、入れることでより多くの呼び出しをまとめられるかも
-	getAllGPAsZTCLock   sync.Mutex
-	getAllGPAsZTCTime   time.Time
-	getAllGPAsZTCResult []float64
-	getAllGPAsZTCError  error
-)
-
-// Zero Time Cache ≒ value-returning throttle
-//   throttleで「無視」される呼び出しAが、直前の「無視」されなかった呼び出しBを待ち、Bの結果をAも結果として返す。
-func (h *handlers) getAllGPAsZTC() ([]float64, error) {
-	t := time.Now()
-	getAllGPAsZTCLock.Lock()
-	// defer getAllGPAsZTCLock.Unlock()
-
-	if getAllGPAsZTCTime.After(t) {
-		getAllGPAsZTCLock.Unlock() // deferの代わり
-		return getAllGPAsZTCResult, getAllGPAsZTCError
-	}
-
-	if getAllGPAsZTCDelay > 0 {
-		time.Sleep(getAllGPAsZTCDelay)
-	}
-	getAllGPAsZTCTime = time.Now() // これを本体の処理より上に書く！ (当然) (Sleepよりは後でいい)
-
-	getAllGPAsZTCResult, getAllGPAsZTCError = h.getAllGPAsWithoutZTC()
-
-	getAllGPAsZTCLock.Unlock() // deferの代わり
-	return getAllGPAsZTCResult, getAllGPAsZTCError
 }
 
 // 本体の処理
