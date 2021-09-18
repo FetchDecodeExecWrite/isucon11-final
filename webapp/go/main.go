@@ -12,8 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
