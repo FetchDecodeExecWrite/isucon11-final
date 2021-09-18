@@ -1228,7 +1228,7 @@ func (h *handlers) RegisterScores(c echo.Context) error {
 
 		if isFirst {
 			var rowcnt int
-			if err := tx.Select(&rowcnt, `SELECT ROW_COUNT()`); err != nil {
+			if err := tx.Get(&rowcnt, `SELECT ROW_COUNT()`); err != nil {
 				c.Logger().Error(err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
