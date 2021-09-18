@@ -888,7 +888,7 @@ type GetCourseDetailResponse struct {
 	Keywords    string       `json:"keywords" db:"keywords"`
 	Status      CourseStatus `json:"status" db:"status"`
 	// Teacher     string       `json:"teacher" db:"teacher"`
-	Teacher     string       `json:"teacher" db:"teacher_name"`
+	Teacher string `json:"teacher" db:"teacher_name"`
 }
 
 // GetCourseDetail GET /api/courses/:courseID 科目詳細の取得
@@ -945,10 +945,10 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 
 	if req.Status == StatusClosed {
 		if _, err := tx.Exec(
-			"UPDATE `users` " +
-			"INNER JOIN `registrations` ON `registrations`.`course_id` = ? AND `registrations`.`user_id` = `users`.`id` " +
-			"SET `credit_count` = `credit_count` + ?, " +
-			"`users`.`sum_score` = `users`.`sum_score` + ? * `registrations`.`sum_score`",
+			"UPDATE `users` "+
+				"INNER JOIN `registrations` ON `registrations`.`course_id` = ? AND `registrations`.`user_id` = `users`.`id` "+
+				"SET `credit_count` = `credit_count` + ?, "+
+				"`users`.`sum_score` = `users`.`sum_score` + ? * `registrations`.`sum_score`",
 			courseID,
 			course.Credit,
 			course.Credit,
@@ -1459,15 +1459,8 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Invalid format.")
 	}
 
-	tx, err := h.DB.Beginx()
-	if err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
 	var count int
-	if err := tx.Get(&count, "SELECT COUNT(*) FROM `courses` WHERE `id` = ?", req.CourseID); err != nil {
+	if err := h.DB.Get(&count, "SELECT COUNT(*) FROM `courses` WHERE `id` = ?", req.CourseID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -1475,9 +1468,8 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 		return c.String(http.StatusNotFound, "No such course.")
 	}
 
-	if _, err := tx.Exec("INSERT INTO `announcements` (`id`, `course_id`, `title`, `message`) VALUES (?, ?, ?, ?)",
+	if _, err := h.DB.Exec("INSERT INTO `announcements` (`id`, `course_id`, `title`, `message`) VALUES (?, ?, ?, ?)",
 		req.ID, req.CourseID, req.Title, req.Message); err != nil {
-		_ = tx.Rollback()
 		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
 			var announcement Announcement
 			if err := h.DB.Get(&announcement, "SELECT * FROM `announcements` WHERE `id` = ?", req.ID); err != nil {
@@ -1497,7 +1489,7 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 	query := "SELECT `users`.* FROM `users`" +
 		" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
 		" WHERE `registrations`.`course_id` = ?"
-	if err := tx.Select(&targets, query, req.CourseID); err != nil {
+	if err := h.DB.Select(&targets, query, req.CourseID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -1507,17 +1499,12 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 		for i, user := range targets {
 			rows[i] = UnreadAnnouncement{req.ID, user.ID}
 		}
-		if _, err := tx.NamedExec("INSERT INTO `unread_announcements`"+
+		if _, err := h.DB.NamedExec("INSERT INTO `unread_announcements`"+
 			"(`announcement_id`, `user_id`)"+
 			"VALUES (:announcement_id, :user_id)", rows); err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	return c.NoContent(http.StatusCreated)
