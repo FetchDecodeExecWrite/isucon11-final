@@ -143,6 +143,8 @@ func (h *handlers) Initialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	initializeUnreadAnnouncement(dbForInit)
+
 	res := InitializeResponse{
 		Language: "go",
 	}
@@ -941,9 +943,21 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if _, err := tx.Exec("UPDATE `courses` SET `status` = ? WHERE `id` = ?", req.Status, courseID); err != nil {
+	if _, err := tx.Exec("UPDATE `courses` SET `status` = ? WHERE `id` = ? AND `status` <> 'closed'", req.Status, courseID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	{
+		var rowcnt int
+		if err := tx.Get(&rowcnt, `SELECT ROW_COUNT()`); err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		if rowcnt == 0 {
+			// NO tx commit, then tx reverted. Returns success.
+			return c.NoContent(http.StatusOK)
+		}
 	}
 
 	if req.Status == StatusClosed {
@@ -1612,11 +1626,20 @@ func (h *handlers) GetAnnouncementDetail(c echo.Context) error {
 		return c.String(http.StatusNotFound, "No such announcement.")
 	}
 
-	if _, err := tx.Exec("UPDATE `unread_announcements` SET `is_deleted` = true WHERE `announcement_id` = ? AND `user_id` = ?", announcementID, userID); err != nil {
+	if _, err := tx.Exec("UPDATE `unread_announcements` SET `is_deleted` = true WHERE `announcement_id` = ? AND `user_id` = ? AND NOT `is_deleted`", announcementID, userID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	decUnreadAnnouncement(userID)
+	{
+		var rowcnt int
+		if err := tx.Get(&rowcnt, `SELECT ROW_COUNT()`); err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		if rowcnt != 0 {
+			decUnreadAnnouncement(userID)
+		}
+	}
 
 	if err := tx.Commit(); err != nil {
 		c.Logger().Error(err)
