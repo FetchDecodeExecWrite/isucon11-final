@@ -1536,7 +1536,7 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 	}
 	if _, err := tx.NamedExec("INSERT INTO `unread_announcements`"+
 		"(`announcement_id`, `user_id`)"+
-		"VALUES (:announcement_id, :user_id))", rows); err != nil {
+		"VALUES (:announcement_id, :user_id)", rows); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
