@@ -1530,15 +1530,17 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	rows := make([]UnreadAnnouncement, len(targets))
-	for i, user := range targets {
-		rows[i] = UnreadAnnouncement{req.ID, user.ID}
-	}
-	if _, err := tx.NamedExec("INSERT INTO `unread_announcements`"+
-		"(`announcement_id`, `user_id`)"+
-		"VALUES (:announcement_id, :user_id)", rows); err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
+	if len(targets) > 0 {
+		rows := make([]UnreadAnnouncement, len(targets))
+		for i, user := range targets {
+			rows[i] = UnreadAnnouncement{req.ID, user.ID}
+		}
+		if _, err := tx.NamedExec("INSERT INTO `unread_announcements`"+
+			"(`announcement_id`, `user_id`)"+
+			"VALUES (:announcement_id, :user_id)", rows); err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
