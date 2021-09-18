@@ -627,7 +627,7 @@ func (h *handlers) GetGrades(c echo.Context) error {
 
 		// この科目を履修している学生のTotalScore一覧を取得
 		var totals []int
-		query := "`users`.`sum_score` AS `total_score`" +
+		query := "SELECT `users`.`sum_score` AS `total_score`" +
 			" FROM `users`" +
 			" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
 			" JOIN `courses` ON `registrations`.`course_id` = ?"
