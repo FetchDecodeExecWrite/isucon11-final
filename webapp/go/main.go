@@ -603,10 +603,10 @@ func (h *handlers) GetGrades(c echo.Context) error {
 	for _, course := range registeredCourses {
 		// 講義一覧の取得
 		var classes []ClassWithGrade
-		query = "SELECT `classes`.*, IFNULL(`submissions`.`score`, -1) AS `my_score`," +
+		query = "SELECT `classes`.*, IFNULL(`subs`.`score`, -1) AS `my_score`," +
 			" (SELECT COUNT(*) FROM `submissions` WHERE `class_id` = `classes`.`id`) AS `submissions_count`" +
 			" FROM `classes`" +
-			" LEFT JOIN `submissions` ON `submissions`.`user_id` = ? AND `submissions`.`class_id` = `classes`.`id`" +
+			" LEFT JOIN `submissions` AS `subs` ON `subs`.`user_id` = ? AND `subs`.`class_id` = `classes`.`id`" +
 			" WHERE `course_id` = ?" +
 			" ORDER BY `part` DESC"
 		if err := h.DB.Select(&classes, query, userID, course.ID); err != nil {
