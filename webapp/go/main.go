@@ -1159,6 +1159,17 @@ func (h *handlers) SubmitAssignment(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	if registrationCount == 0 {
+		// 下のやつのコピー
+		var status CourseStatus
+		if err := h.DB.Get(&status, "SELECT `status` FROM `courses` WHERE `id` = ?", courseID); err != nil && err != sql.ErrNoRows {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		} else if err == sql.ErrNoRows {
+			return c.String(http.StatusNotFound, "No such course.")
+		}
+		if status != StatusInProgress {
+			return c.String(http.StatusBadRequest, "This course is not in progress.")
+		}
 		return c.String(http.StatusBadRequest, "You have not taken this course.")
 	}
 
