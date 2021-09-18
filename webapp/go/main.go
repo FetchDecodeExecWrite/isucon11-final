@@ -1364,7 +1364,7 @@ func initializeUnreadAnnouncement(db *sqlx.DB) {
 	}
 	for _, id := range ids {
 		var count int
-		if err := db.Get(&count, "SELECT COUNT(*) FROM `unread_announcements` WHERE `user_id` = ? AND NOT `is_deleted`"); err != nil {
+		if err := db.Get(&count, "SELECT COUNT(*) FROM `unread_announcements` WHERE `user_id` = ? AND NOT `is_deleted`", id); err != nil {
 			panic("failed to get count")
 		}
 		UnreadAnnouncements[id] = count
