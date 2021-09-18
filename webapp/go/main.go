@@ -1537,7 +1537,7 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 
 	if _, err := h.DB.Exec(
 		"INSERT INTO `announcements` (`id`, `course_id`, `title`, `message`, `course_name`)" +
-			" VALUES (?, ?, ?, ?, SELECT `name` FROM `courses` WHERE `courses`.`id` = ?)",
+			" VALUES (?, ?, ?, ?, (SELECT `name` FROM `courses` WHERE `courses`.`id` = ?))",
 		req.ID, req.CourseID, req.Title, req.Message, req.CourseID,
 	); err != nil {
 		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
