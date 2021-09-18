@@ -14,7 +14,10 @@ CREATE TABLE `users`
     `code`            CHAR(6) UNIQUE              NOT NULL,
     `name`            VARCHAR(255)                NOT NULL,
     `hashed_password` BINARY(60)                  NOT NULL,
-    `type`            ENUM ('student', 'teacher') NOT NULL
+    `credit_count`    INT UNSIGNED                NOT NULL DEFAULT 0,
+    `sum_score`       INT UNSIGNED                NOT NULL DEFAULT 0,
+    `type`            ENUM ('student', 'teacher') NOT NULL,
+    INDEX tycc (type, credit_count)
 );
 
 CREATE TABLE `courses`
@@ -37,6 +40,7 @@ CREATE TABLE `registrations`
 (
     `course_id` CHAR(26),
     `user_id`   CHAR(26),
+    `sum_score` INT UNSIGNED                NOT NULL DEFAULT 0,
     PRIMARY KEY (`course_id`, `user_id`),
     CONSTRAINT FK_registrations_course_id FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`),
     CONSTRAINT FK_registrations_user_id FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
