@@ -1352,16 +1352,16 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	var args []interface{}
 	query := "SELECT `announcements`.`id`, `courses`.`id` AS `course_id`, `courses`.`name` AS `course_name`, `announcements`.`title`, NOT `unread_announcements`.`is_deleted` AS `unread`" +
 		" FROM `announcements`" +
-		" JOIN `courses` ON `announcements`.`course_id` = `courses`.`id`" +
-		" JOIN `unread_announcements` ON `announcements`.`id` = `unread_announcements`.`announcement_id`" +
-		" WHERE 1=1"
-
+		" JOIN `courses` ON `announcements`.`course_id` = `courses`.`id`"
 	if courseID := c.QueryParam("course_id"); courseID != "" {
 		query += " AND `announcements`.`course_id` = ?"
 		args = append(args, courseID)
 	}
 
-	query += " AND `unread_announcements`.`user_id` = ?" +
+	query +=
+		" JOIN `unread_announcements` ON" +
+			" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`" +
+		" WHERE 1=1" +
 		" ORDER BY `announcements`.`id` DESC" +
 		" LIMIT ? OFFSET ?"
 	args = append(args, userID)
