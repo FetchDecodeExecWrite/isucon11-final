@@ -202,6 +202,7 @@ type User struct {
 	Code           string   `db:"code"`
 	Name           string   `db:"name"`
 	HashedPassword []byte   `db:"hashed_password"`
+	CreditCount    int32    `db:"credit_count"`
 	Type           UserType `db:"type"`
 }
 
