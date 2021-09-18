@@ -710,9 +710,7 @@ func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 
 // SearchCourses GET /api/courses 科目検索
 func (h *handlers) SearchCourses(c echo.Context) error {
-	query := "SELECT `courses`.*, `users`.`name` AS `teacher`" +
-		" FROM `courses` JOIN `users` ON `courses`.`teacher_id` = `users`.`id`" +
-		" WHERE 1=1"
+	query := "SELECT `courses`.* FROM `courses` WHERE 1=1"
 	var condition string
 	var args []interface{}
 
@@ -729,7 +727,7 @@ func (h *handlers) SearchCourses(c echo.Context) error {
 	}
 
 	if teacher := c.QueryParam("teacher"); teacher != "" {
-		condition += " AND `users`.`name` = ?"
+		condition += " AND `courses`.`teacher_name` = ?"
 		args = append(args, teacher)
 	}
 
@@ -835,7 +833,7 @@ type AddCourseResponse struct {
 
 // AddCourse POST /api/courses 新規科目登録
 func (h *handlers) AddCourse(c echo.Context) error {
-	userID, _, _, err := getUserInfo(c)
+	userID, userName, _, err := getUserInfo(c)
 	if err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -854,8 +852,8 @@ func (h *handlers) AddCourse(c echo.Context) error {
 	}
 
 	courseID := newULID()
-	_, err = h.DB.Exec("INSERT INTO `courses` (`id`, `code`, `type`, `name`, `description`, `credit`, `period`, `day_of_week`, `teacher_id`, `keywords`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		courseID, req.Code, req.Type, req.Name, req.Description, req.Credit, req.Period, req.DayOfWeek, userID, req.Keywords)
+	_, err = h.DB.Exec("INSERT INTO `courses` (`id`, `code`, `type`, `name`, `description`, `credit`, `period`, `day_of_week`, `teacher_id`, `keywords`, `teacher_name`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		courseID, req.Code, req.Type, req.Name, req.Description, req.Credit, req.Period, req.DayOfWeek, userID, req.Keywords, userName)
 	if err != nil {
 		if mysqlErr, ok := err.(*mysql.MySQLError); ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
 			var course Course
@@ -887,7 +885,8 @@ type GetCourseDetailResponse struct {
 	TeacherID   string       `json:"-" db:"teacher_id"`
 	Keywords    string       `json:"keywords" db:"keywords"`
 	Status      CourseStatus `json:"status" db:"status"`
-	Teacher     string       `json:"teacher" db:"teacher"`
+	// Teacher     string       `json:"teacher" db:"teacher"`
+	Teacher     string       `json:"teacher" db:"teacher_name"`
 }
 
 // GetCourseDetail GET /api/courses/:courseID 科目詳細の取得
@@ -895,9 +894,8 @@ func (h *handlers) GetCourseDetail(c echo.Context) error {
 	courseID := c.Param("courseID")
 
 	var res GetCourseDetailResponse
-	query := "SELECT `courses`.*, `users`.`name` AS `teacher`" +
+	query := "SELECT `courses`.*" +
 		" FROM `courses`" +
-		" JOIN `users` ON `courses`.`teacher_id` = `users`.`id`" +
 		" WHERE `courses`.`id` = ?"
 	if err := h.DB.Get(&res, query, courseID); err != nil && err != sql.ErrNoRows {
 		c.Logger().Error(err)
