@@ -96,7 +96,6 @@ type InitializeResponse struct {
 }
 
 func (h *handlers) Initialize2(c echo.Context) error {
-	exec.Command("curl", ISU3InitializeURL).Run()
 	if err := exec.Command("rm", "-rf", AssignmentsDirectory).Run(); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -111,6 +110,7 @@ func (h *handlers) Initialize2(c echo.Context) error {
 
 // Initialize POST /initialize 初期化エンドポイント
 func (h *handlers) Initialize(c echo.Context) error {
+	exec.Command("curl", ISU3InitializeURL).Run()
 	dbForInit, _ := GetDB(true)
 
 	files := []string{
