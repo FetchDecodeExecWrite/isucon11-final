@@ -941,9 +941,21 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if _, err := tx.Exec("UPDATE `courses` SET `status` = ? WHERE `id` = ?", req.Status, courseID); err != nil {
+	if _, err := tx.Exec("UPDATE `courses` SET `status` = ? WHERE `id` = ? AND `status` <> 'closed'", req.Status, courseID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	{
+		var rowcnt int
+		if err := tx.Get(&rowcnt, `SELECT ROW_COUNT()`); err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		if rowcnt == 0 {
+			// NO tx commit, then tx reverted. Returns success.
+			return c.NoContent(http.StatusOK)
+		}
 	}
 
 	if req.Status == StatusClosed {
