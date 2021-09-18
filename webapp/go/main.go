@@ -143,6 +143,8 @@ func (h *handlers) Initialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	initializeUnreadAnnouncement(dbForInit)
+
 	res := InitializeResponse{
 		Language: "go",
 	}
