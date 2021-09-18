@@ -717,8 +717,7 @@ func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 	var gpas []float64
 	query := "SELECT `users`.`sum_score` / 100 / `users`.`credit_count` AS `gpa`" +
 		" FROM `users`" +
-		" WHERE `users`.`type` = ?" +
-		" GROUP BY `users`.`id`"
+		" WHERE `users`.`type` = ?"
 
 		err := h.DB.Select(&gpas, query, Student)
 
