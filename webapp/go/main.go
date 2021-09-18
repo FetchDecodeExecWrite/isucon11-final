@@ -963,7 +963,7 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 	if req.Status == StatusClosed {
 		if _, err := tx.Exec(
 			"UPDATE `users` SET `credit_count` = `credit_count` + ?, " +
-			"`sum_score` = `sum_score` + ? * SUM( " +
+			"`users`.`sum_score` = `users`.`sum_score` + ? * SUM( " +
 				"SELECT `score` FROM `submissions` WHERE `users`.`id` = `submissions`.`user_id` AND " +
 				"EXISTS(SELECT 1 FROM `classes` WHERE `classes`.`course_id` = ? AND `submissions`.`class_id` = `classes`.`id`) " +
 			") " +
@@ -1246,7 +1246,7 @@ func (h *handlers) RegisterScores(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		if _, err := tx.Exec("UPDATE `registrations` JOIN `users` ON `users`.`code` = ? AND `users`.`id` = `registrations`.`user_id` SET `sum_score` = `sum_score` + ? WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = ?)", score.UserCode, score.Score, classID); err != nil {
+		if _, err := tx.Exec("UPDATE `registrations` JOIN `users` ON `users`.`code` = ? AND `users`.`id` = `registrations`.`user_id` SET `registrations`.`sum_score` = `registrations`.`sum_score` + ? WHERE `registrations`.`course_id` = (SELECT `course_id` FROM `classes` WHERE `classes`.`id` = ?)", score.UserCode, score.Score, classID); err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
