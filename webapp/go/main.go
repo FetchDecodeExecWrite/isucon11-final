@@ -203,6 +203,7 @@ type User struct {
 	Name           string   `db:"name"`
 	HashedPassword []byte   `db:"hashed_password"`
 	CreditCount    int32    `db:"credit_count"`
+	SumScore       int32    `db:"sum_score"`
 	Type           UserType `db:"type"`
 }
 
@@ -718,12 +719,8 @@ func (h *handlers) getAllGPAsZTC() ([]float64, error) {
 // getAllGPAsZTC経由の呼び出しは排他制御が保証されているが、ほかの関数との兼ね合いで内部で別のmutexを使うこともある
 func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 	var gpas []float64
-	query := "SELECT IFNULL(SUM(`submissions`.`score` * `courses`.`credit`), 0) / 100 / `users`.`credit_count` AS `gpa`" +
+	query := "SELECT `users`.`sum_score` / 100 / `users`.`credit_count` AS `gpa`" +
 		" FROM `users`" +
-		" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
-		" JOIN `courses` ON `registrations`.`course_id` = `courses`.`id` AND `courses`.`status` = ?" +
-		" LEFT JOIN `classes` ON `courses`.`id` = `classes`.`course_id`" +
-		" LEFT JOIN `submissions` ON `users`.`id` = `submissions`.`user_id` AND `submissions`.`class_id` = `classes`.`id`" +
 		" WHERE `users`.`type` = ?" +
 		" GROUP BY `users`.`id`"
 
@@ -971,8 +968,13 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 
 	if req.Status == StatusClosed {
 		if _, err := tx.Exec(
-			"UPDATE `users` SET `credit_count` = `credit_count` + ? " +
-			"WHERE EXISTS(SELECT 1 FROM `registrations` WHERE `course_id` = ? AND `user_id` = `users`.`id`)",
+			"UPDATE `users` SET `credit_count` = `credit_count` + ?, " +
+			"`sum_score` = `sum_score` + ? * SUM( " +
+				"SELECT `score` FROM `submissions` WHERE `users`.`id` = `submissions`.`user_id` AND " +
+				"EXISTS(SELECT 1 FROM `classes` WHERE `submissions`.`class_id` = `classes`.`id`) " +
+			") " +
+			"WHERE EXISTS(SELECT 1 FROM `registrations` WHERE `course_id` = ? AND `user_id` = `users`.`id`) ",
+			course.Credit,
 			course.Credit,
 			courseID,
 		); err != nil {

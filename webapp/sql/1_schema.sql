@@ -15,6 +15,7 @@ CREATE TABLE `users`
     `name`            VARCHAR(255)                NOT NULL,
     `hashed_password` BINARY(60)                  NOT NULL,
     `credit_count`    INT UNSIGNED                NOT NULL DEFAULT 0,
+    `score_sum`       INT UNSIGNED                NOT NULL DEFAULT 0,
     `type`            ENUM ('student', 'teacher') NOT NULL
 );
 
