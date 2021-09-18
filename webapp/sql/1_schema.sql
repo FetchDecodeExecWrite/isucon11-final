@@ -75,6 +75,7 @@ CREATE TABLE `announcements`
     `course_id`  CHAR(26)     NOT NULL,
     `title`      VARCHAR(255) NOT NULL,
     `message`    TEXT         NOT NULL,
+    INDEX cidid (course_id, id),
     CONSTRAINT FK_announcements_course_id FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`)
 );
 
@@ -84,6 +85,7 @@ CREATE TABLE `unread_announcements`
     `user_id`         CHAR(26)   NOT NULL,
     `is_deleted`      TINYINT(1) NOT NULL DEFAULT false,
     PRIMARY KEY (`announcement_id`, `user_id`),
+    INDEX uidaid (`user_id`, `announcement_id`),
     CONSTRAINT FK_unread_announcements_announcement_id FOREIGN KEY (`announcement_id`) REFERENCES `announcements` (`id`),
     CONSTRAINT FK_unread_announcements_user_id FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 );
