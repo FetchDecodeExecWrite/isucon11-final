@@ -922,15 +922,8 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "Invalid format.")
 	}
 
-	tx, err := h.DB.Beginx()
-	if err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
 	var course Course
-	if err := tx.Get(&course, "SELECT `credit` FROM `courses` WHERE `id` = ? FOR UPDATE", courseID); err != nil {
+	if err := h.DB.Get(&course, "SELECT `credit` FROM `courses` WHERE `id` = ? FOR UPDATE", courseID); err != nil {
 		if err == sql.ErrNoRows {
 			return c.String(http.StatusNotFound, "No such course.")
 		}
@@ -938,13 +931,13 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if _, err := tx.Exec("UPDATE `courses` SET `status` = ? WHERE `id` = ?", req.Status, courseID); err != nil {
+	if _, err := h.DB.Exec("UPDATE `courses` SET `status` = ? WHERE `id` = ?", req.Status, courseID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	if req.Status == StatusClosed {
-		if _, err := tx.Exec(
+		if _, err := h.DB.Exec(
 			"UPDATE `users` "+
 				"INNER JOIN `registrations` ON `registrations`.`course_id` = ? AND `registrations`.`user_id` = `users`.`id` "+
 				"SET `credit_count` = `credit_count` + ?, "+
@@ -956,11 +949,6 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	return c.NoContent(http.StatusOK)
@@ -1354,9 +1342,9 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	query +=
 		" JOIN `unread_announcements` ON" +
 			" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`" +
-		" WHERE 1=1" +
-		" ORDER BY `announcements`.`id` DESC" +
-		" LIMIT ? OFFSET ?"
+			" WHERE 1=1" +
+			" ORDER BY `announcements`.`id` DESC" +
+			" LIMIT ? OFFSET ?"
 	args = append(args, userID)
 
 	var page int
