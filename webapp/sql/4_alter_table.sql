@@ -4,4 +4,4 @@ CREATE INDEX `course_teacher` ON `courses` (`teacher_name`);
 
 
 ALTER TABLE `announcements` ADD COLUMN `course_name` VARCHAR(255) NOT NULL;
-UPDATE `announcements` SET `course_name` = (SELECT `name` FROM `courses` WHERE `announcements`.`id` = `course_id`);
+UPDATE `announcements` SET `course_name` = (SELECT `name` FROM `courses` WHERE `courses`.`id` = `course_id`);
