@@ -2,6 +2,34 @@
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
 
+KATARIBE_LOG="/var/log/nginx/kataribe.log"
+NGINX_LTSV_LOG="/var/log/nginx/ltsv.log"
+SLOW_LOG="/var/log/mysql/mysql-slow.sql"
+PPROF_PORT="3000"
+PPROF_SEC="30"
+APPNAME="isucholar.go"
+
+alias jlog="sudo journalctl -eu"
+alias jlog-isu="jlog $APPNAME"
+
+alias clear-kataribe="echo | sudo tee $KATARIBE_LOG"
+alias clear-ltsv="echo | sudo tee $NGINX_LTSV_LOG"
+alias clear-slowlog="echo | sudo tee $SLOW_LOG"
+
+alias dumpslow-sum-time="sudo mysqldumpslow -s t -r $SLOW_LOG"
+alias dumpslow-sum-lock="sudo mysqldumpslow -s l -r $SLOW_LOG"
+alias dumpslow-sum-cnt="sudo mysqldumpslow -s c -r $SLOW_LOG"
+alias dumpslow-sum-rows="sudo mysqldumpslow -s r -r $SLOW_LOG"
+
+alias dumpslow-avg-time="sudo mysqldumpslow -s at -r $SLOW_LOG"
+alias dumpslow-avg-lock="sudo mysqldumpslow -s al -r $SLOW_LOG"
+alias dumpslow-avg-rows="sudo mysqldumpslow -s ar -r $SLOW_LOG"
+
+alias kataru="cat $KATARIBE_LOG | ~/bin/kataribe"
+
+alias pprof="go tool pprof http://localhost:$PPROF_PORT/debug/pprof/profile?seconds=$PPROF_SEC"
+alias pprof-svg="go tool pprof -svg" # .pb.gz file pathを続ける
+
 # If not running interactively, don't do anything
 case $- in
     *i*) ;;
