@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -19,5 +21,11 @@ func GetDB(batch bool) (*sqlx.DB, error) {
 	mysqlConfig.MultiStatements = batch
 	mysqlConfig.InterpolateParams = true
 
-	return sqlx.Open("mysql", mysqlConfig.FormatDSN())
+	for {
+		db, err := sqlx.Open("mysql", mysqlConfig.FormatDSN())
+		if err == nil {
+			return db, nil
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
