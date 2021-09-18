@@ -966,11 +966,12 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 			"UPDATE `users` SET `credit_count` = `credit_count` + ?, " +
 			"`sum_score` = `sum_score` + ? * SUM( " +
 				"SELECT `score` FROM `submissions` WHERE `users`.`id` = `submissions`.`user_id` AND " +
-				"EXISTS(SELECT 1 FROM `classes` WHERE `submissions`.`class_id` = `classes`.`id`) " +
+				"EXISTS(SELECT 1 FROM `classes` WHERE `classes`.`course_id` = ? AND `submissions`.`class_id` = `classes`.`id`) " +
 			") " +
 			"WHERE EXISTS(SELECT 1 FROM `registrations` WHERE `course_id` = ? AND `user_id` = `users`.`id`) ",
 			course.Credit,
 			course.Credit,
+			courseID,
 			courseID,
 		); err != nil {
 			c.Logger().Error(err)
