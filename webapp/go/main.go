@@ -971,7 +971,7 @@ func (h *handlers) SetCourseStatus(c echo.Context) error {
 
 	if req.Status == StatusClosed {
 		if _, err := tx.Exec(
-			"UPDATE `users` SET `credit_count` = `credit_count` + ?" +
+			"UPDATE `users` SET `credit_count` = `credit_count` + ? " +
 			"WHERE EXISTS(SELECT 1 FROM `registrations` WHERE `course_id` = ? AND `user_id` = `users`.`id`)",
 			course.Credit,
 			courseID,
