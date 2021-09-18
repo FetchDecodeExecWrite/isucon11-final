@@ -75,6 +75,7 @@ CREATE TABLE `announcements`
     `course_id`  CHAR(26)     NOT NULL,
     `title`      VARCHAR(255) NOT NULL,
     `message`    TEXT         NOT NULL,
+    INDEX cidid (course_id, id),
     CONSTRAINT FK_announcements_course_id FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`)
 );
 
