@@ -1476,8 +1476,8 @@ type AddAnnouncementRequest struct {
 }
 
 type UnreadAnnouncement struct {
-	ID     string `db: "announcement_id"`
-	UserID string `db: "user_id"`
+	AnnoucementID string `db:"announcement_id"`
+	UserID        string `db:"user_id"`
 }
 
 // AddAnnouncement POST /api/announcements 新規お知らせ追加
@@ -1534,7 +1534,9 @@ func (h *handlers) AddAnnouncement(c echo.Context) error {
 	for i, user := range targets {
 		rows[i] = UnreadAnnouncement{req.ID, user.ID}
 	}
-	if _, err := tx.NamedExec("INSERT INTO `unread_announcements` (`announcement_id`, `user_id`) VALUES (:announcement_id, :user_id))", rows); err != nil {
+	if _, err := tx.NamedExec("INSERT INTO `unread_announcements`"+
+		"(`announcement_id`, `user_id`)"+
+		"VALUES (:announcement_id, :user_id))", rows); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
