@@ -1430,7 +1430,7 @@ func getUnreadAnnouncementCnt(userid string) int {
 // GetAnnouncementList GET /api/announcements お知らせ一覧取得
 func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	if rand.Intn(4) == 0 {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 7 / 2)
 	}
 
 	userID, _, _, err := getUserInfo(c)
