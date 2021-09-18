@@ -733,9 +733,9 @@ func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
 		" WHERE `users`.`type` = ?" +
 		" GROUP BY `users`.`id`"
 
-		err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
+	err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
 
-		return gpas, err
+	return gpas, err
 }
 
 // ---------- Courses API ----------
@@ -1573,7 +1573,7 @@ func (h *handlers) GetAnnouncementDetail(c echo.Context) error {
 		return c.String(http.StatusNotFound, "No such announcement.")
 	}
 
-	if _, err := tx.Exec("UPDATE `unread_announcements` SET `is_deleted` = true WHERE `announcement_id` = ? AND `user_id` = ?", announcementID, userID); err != nil {
+	if _, err := tx.Exec("DELETE FROM `unread_announcements` WHERE `announcement_id` = ? AND `user_id` = ?", announcementID, userID); err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
