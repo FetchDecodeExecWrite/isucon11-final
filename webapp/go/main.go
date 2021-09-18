@@ -258,6 +258,7 @@ type Course struct {
 	Period      uint8        `db:"period"`
 	DayOfWeek   DayOfWeek    `db:"day_of_week"`
 	TeacherID   string       `db:"teacher_id"`
+	TeacherName string       `db:"teacher_name"`
 	Keywords    string       `db:"keywords"`
 	Status      CourseStatus `db:"status"`
 }
