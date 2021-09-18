@@ -1440,7 +1440,7 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 	args = append(args, userID)
 
 	if courseID := c.QueryParam("course_id"); courseID != "" {
-		query += " WHERE `announcements`.`course_id` = ?"
+		query += " AND `announcements`.`course_id` = ?"
 		args = append(args, courseID)
 	}
 	query +=
