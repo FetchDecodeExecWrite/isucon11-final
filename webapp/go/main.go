@@ -571,6 +571,12 @@ type ClassScore struct {
 	Submitters int    `json:"submitters"` // 提出した学生数
 }
 
+type ClassWithGrade struct {
+	Class
+	SubmissionsCount int `db:"submissions_count"`
+	MyScore          int `db:"my_score"`
+}
+
 // GetGrades GET /api/users/me/grades 成績取得
 func (h *handlers) GetGrades(c echo.Context) error {
 	userID, _, _, err := getUserInfo(c)
@@ -596,9 +602,11 @@ func (h *handlers) GetGrades(c echo.Context) error {
 	myCredits := 0
 	for _, course := range registeredCourses {
 		// 講義一覧の取得
-		var classes []Class
-		query = "SELECT *" +
+		var classes []ClassWithGrade
+		query = "SELECT *, IFNULL(`submissions`.`score`, -1) AS `my_score`," +
+			" (SELECT COUNT(*) FROM `submissions` WHERE `class_id` = `classes`.`id`) AS `submissions_count`" +
 			" FROM `classes`" +
+			" LEFT JOIN `submissions` ON `submissions`.`user_id` = ? AND `submissions`.`class_id` = `classes`.`id`" +
 			" WHERE `course_id` = ?" +
 			" ORDER BY `part` DESC"
 		if err := h.DB.Select(&classes, query, course.ID); err != nil {
@@ -610,33 +618,22 @@ func (h *handlers) GetGrades(c echo.Context) error {
 		classScores := make([]ClassScore, 0, len(classes))
 		var myTotalScore int
 		for _, class := range classes {
-			var submissionsCount int
-			if err := h.DB.Get(&submissionsCount, "SELECT COUNT(*) FROM `submissions` WHERE `class_id` = ?", class.ID); err != nil {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-
-			var myScore sql.NullInt64
-			if err := h.DB.Get(&myScore, "SELECT `submissions`.`score` FROM `submissions` WHERE `user_id` = ? AND `class_id` = ?", userID, class.ID); err != nil && err != sql.ErrNoRows {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			} else if err == sql.ErrNoRows || !myScore.Valid {
+			if class.MyScore < 0 {
 				classScores = append(classScores, ClassScore{
 					ClassID:    class.ID,
 					Part:       class.Part,
 					Title:      class.Title,
 					Score:      nil,
-					Submitters: submissionsCount,
+					Submitters: class.SubmissionsCount,
 				})
 			} else {
-				score := int(myScore.Int64)
-				myTotalScore += score
+				myTotalScore += class.MyScore
 				classScores = append(classScores, ClassScore{
 					ClassID:    class.ID,
 					Part:       class.Part,
 					Title:      class.Title,
-					Score:      &score,
-					Submitters: submissionsCount,
+					Score:      &class.MyScore,
+					Submitters: class.SubmissionsCount,
 				})
 			}
 		}
