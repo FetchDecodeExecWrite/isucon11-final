@@ -1127,6 +1127,12 @@ func (h *handlers) SubmitAssignment(c echo.Context) error {
 	}
 	defer file.Close()
 
+	data, err := io.ReadAll(file)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
 	dst := AssignmentsDirectory + classID + "-" + userID + ".pdf"
 	if err := os.WriteFile(dst, data, 0666); err != nil {
 		c.Logger().Error(err)
@@ -1172,12 +1178,6 @@ func (h *handlers) SubmitAssignment(c echo.Context) error {
 	}
 
 	if _, err := tx.Exec("INSERT INTO `submissions` (`user_id`, `class_id`, `file_name`) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE `file_name` = VALUES(`file_name`)", userID, classID, header.Filename); err != nil {
-		c.Logger().Error(err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
-	data, err := io.ReadAll(file)
-	if err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
