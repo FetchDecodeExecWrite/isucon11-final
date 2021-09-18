@@ -609,7 +609,7 @@ func (h *handlers) GetGrades(c echo.Context) error {
 			" LEFT JOIN `submissions` ON `submissions`.`user_id` = ? AND `submissions`.`class_id` = `classes`.`id`" +
 			" WHERE `course_id` = ?" +
 			" ORDER BY `part` DESC"
-		if err := h.DB.Select(&classes, query, course.ID); err != nil {
+		if err := h.DB.Select(&classes, query, userID, course.ID); err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
