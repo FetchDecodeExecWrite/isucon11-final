@@ -25,7 +25,7 @@ func GetDB(batch bool) (*sqlx.DB, error) {
 		db, err := sqlx.Open("mysql", mysqlConfig.FormatDSN())
 		if err == nil {
 			var x int
-			if err := db.Select(&x, "SELECT 1"); err == nil {
+			if err := db.Get(&x, "SELECT 1"); err == nil {
 				return db, nil
 			}
 		}
