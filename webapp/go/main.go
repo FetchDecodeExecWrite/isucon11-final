@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
@@ -659,23 +661,8 @@ func (h *handlers) GetGrades(c echo.Context) error {
 
 	// GPAの統計値
 	// 一つでも修了した科目がある学生のGPA一覧
-	var gpas []float64
-	query = "SELECT IFNULL(SUM(`submissions`.`score` * `courses`.`credit`), 0) / 100 / `credits`.`credits` AS `gpa`" +
-		" FROM `users`" +
-		" JOIN (" +
-		"     SELECT `users`.`id` AS `user_id`, SUM(`courses`.`credit`) AS `credits`" +
-		"     FROM `users`" +
-		"     JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
-		"     JOIN `courses` ON `registrations`.`course_id` = `courses`.`id` AND `courses`.`status` = ?" +
-		"     GROUP BY `users`.`id`" +
-		" ) AS `credits` ON `credits`.`user_id` = `users`.`id`" +
-		" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
-		" JOIN `courses` ON `registrations`.`course_id` = `courses`.`id` AND `courses`.`status` = ?" +
-		" LEFT JOIN `classes` ON `courses`.`id` = `classes`.`course_id`" +
-		" LEFT JOIN `submissions` ON `users`.`id` = `submissions`.`user_id` AND `submissions`.`class_id` = `classes`.`id`" +
-		" WHERE `users`.`type` = ?" +
-		" GROUP BY `users`.`id`"
-	if err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student); err != nil {
+	gpas, err := h.getAllGPAsZTC()
+	if err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -693,6 +680,62 @@ func (h *handlers) GetGrades(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, res)
+}
+
+var (
+	getAllGPAsZTCDelay  = 100 * time.Millisecond // 入れなくても良いが、入れることでより多くの呼び出しをまとめられるかも
+	getAllGPAsZTCLock   sync.Mutex
+	getAllGPAsZTCTime   time.Time
+	getAllGPAsZTCResult []float64
+	getAllGPAsZTCError  error
+)
+
+// Zero Time Cache ≒ value-returning throttle
+//   throttleで「無視」される呼び出しAが、直前の「無視」されなかった呼び出しBを待ち、Bの結果をAも結果として返す。
+func (h *handlers) getAllGPAsZTC() ([]float64, error) {
+	t := time.Now()
+	getAllGPAsZTCLock.Lock()
+	// defer getAllGPAsZTCLock.Unlock()
+
+	if getAllGPAsZTCTime.After(t) {
+		getAllGPAsZTCLock.Unlock() // deferの代わり
+		return getAllGPAsZTCResult, getAllGPAsZTCError
+	}
+
+	if getAllGPAsZTCDelay > 0 {
+		time.Sleep(getAllGPAsZTCDelay)
+	}
+	getAllGPAsZTCTime = time.Now() // これを本体の処理より上に書く！ (当然) (Sleepよりは後でいい)
+
+	getAllGPAsZTCResult, getAllGPAsZTCError = h.getAllGPAsWithoutZTC()
+
+	getAllGPAsZTCLock.Unlock() // deferの代わり
+	return getAllGPAsZTCResult, getAllGPAsZTCError
+}
+
+// 本体の処理
+// getAllGPAsZTC経由の呼び出しは排他制御が保証されているが、ほかの関数との兼ね合いで内部で別のmutexを使うこともある
+func (h *handlers) getAllGPAsWithoutZTC() ([]float64, error) {
+	var gpas []float64
+	query := "SELECT IFNULL(SUM(`submissions`.`score` * `courses`.`credit`), 0) / 100 / `credits`.`credits` AS `gpa`" +
+		" FROM `users`" +
+		" JOIN (" +
+		"     SELECT `users`.`id` AS `user_id`, SUM(`courses`.`credit`) AS `credits`" +
+		"     FROM `users`" +
+		"     JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
+		"     JOIN `courses` ON `registrations`.`course_id` = `courses`.`id` AND `courses`.`status` = ?" +
+		"     GROUP BY `users`.`id`" +
+		" ) AS `credits` ON `credits`.`user_id` = `users`.`id`" +
+		" JOIN `registrations` ON `users`.`id` = `registrations`.`user_id`" +
+		" JOIN `courses` ON `registrations`.`course_id` = `courses`.`id` AND `courses`.`status` = ?" +
+		" LEFT JOIN `classes` ON `courses`.`id` = `classes`.`course_id`" +
+		" LEFT JOIN `submissions` ON `users`.`id` = `submissions`.`user_id` AND `submissions`.`class_id` = `classes`.`id`" +
+		" WHERE `users`.`type` = ?" +
+		" GROUP BY `users`.`id`"
+
+		err := h.DB.Select(&gpas, query, StatusClosed, StatusClosed, Student)
+
+		return gpas, err
 }
 
 // ---------- Courses API ----------
