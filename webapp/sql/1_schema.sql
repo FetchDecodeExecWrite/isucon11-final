@@ -33,7 +33,9 @@ CREATE TABLE `courses`
     `teacher_id`  CHAR(26)                                                      NOT NULL,
     `keywords`    TEXT                                                          NOT NULL,
     `status`      ENUM ('registration', 'in-progress', 'closed')                NOT NULL DEFAULT 'registration',
-    CONSTRAINT FK_courses_teacher_id FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`)
+    CONSTRAINT FK_courses_teacher_id FOREIGN KEY (`teacher_id`) REFERENCES `users` (`id`),
+    INDEX zatsu1 (day_of_week, period, code),
+    INDEX zatsu2 (type, code)
 );
 
 CREATE TABLE `registrations`
