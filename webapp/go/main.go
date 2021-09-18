@@ -1420,21 +1420,19 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 
 	var announcements []AnnouncementWithoutDetail
 	var args []interface{}
-	query := "SELECT `announcements`.`id`, `courses`.`id` AS `course_id`, `courses`.`name` AS `course_name`, `announcements`.`title`, NOT `unread_announcements`.`is_deleted` AS `unread`" +
+	query := "SELECT `announcements`.`id`, `course_id`, `course_name`, `title`, NOT `unread_announcements`.`is_deleted` AS `unread`" +
 		" FROM `announcements`" +
-		" JOIN `courses` ON `announcements`.`course_id` = `courses`.`id`"
+		" JOIN `unread_announcements` ON" +
+		" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`"
+	args = append(args, userID)
+
 	if courseID := c.QueryParam("course_id"); courseID != "" {
-		query += " AND `announcements`.`course_id` = ?"
+		query += " WHERE `announcements`.`course_id` = ?"
 		args = append(args, courseID)
 	}
-
 	query +=
-		" JOIN `unread_announcements` ON" +
-			" `unread_announcements`.`user_id` = ? AND `announcements`.`id` = `unread_announcements`.`announcement_id`" +
-			" WHERE 1=1" +
-			" ORDER BY `announcements`.`id` DESC" +
+		" ORDER BY `announcements`.`id` DESC" +
 			" LIMIT ? OFFSET ?"
-	args = append(args, userID)
 
 	var page int
 	if c.QueryParam("page") == "" {
@@ -1493,10 +1491,11 @@ func (h *handlers) GetAnnouncementList(c echo.Context) error {
 }
 
 type Announcement struct {
-	ID       string `db:"id"`
-	CourseID string `db:"course_id"`
-	Title    string `db:"title"`
-	Message  string `db:"message"`
+	ID         string `db:"id"`
+	CourseID   string `db:"course_id"`
+	CourseName string `db:"course_name"`
+	Title      string `db:"title"`
+	Message    string `db:"message"`
 }
 
 type AddAnnouncementRequest struct {
@@ -1592,9 +1591,8 @@ func (h *handlers) GetAnnouncementDetail(c echo.Context) error {
 	defer tx.Rollback()
 
 	var announcement AnnouncementDetail
-	query := "SELECT `announcements`.`id`, `courses`.`id` AS `course_id`, `courses`.`name` AS `course_name`, `announcements`.`title`, `announcements`.`message`, NOT `unread_announcements`.`is_deleted` AS `unread`" +
+	query := "SELECT `announcements`.`id`, `course_id`, `course_name`, `title`, `message`, NOT `unread_announcements`.`is_deleted` AS `unread`" +
 		" FROM `announcements`" +
-		" JOIN `courses` ON `courses`.`id` = `announcements`.`course_id`" +
 		" JOIN `unread_announcements` ON `unread_announcements`.`announcement_id` = `announcements`.`id`" +
 		" WHERE `announcements`.`id` = ?" +
 		" AND `unread_announcements`.`user_id` = ?"
